@@ -242,7 +242,7 @@ USBH_StatusTypeDef USBH_LL_Init(USBH_HandleTypeDef *phost)
     g_hhcd.pData = phost;
     phost->pData = &g_hhcd;
 
-    g_hhcd.Instance = USB_OTG_FS;
+    g_hhcd.Instance = USB_OTG_HS;
     g_hhcd.Init.Host_channels = 8;
     g_hhcd.Init.speed = HCD_SPEED_FULL;
     g_hhcd.Init.dma_enable = DISABLE;
