@@ -12,6 +12,7 @@
 #if defined(USBCON) && defined(USBD_USE_MSC_CLASS)
 
 #include <stdint.h>
+#include "usbd_msc.h"
 
 class USBMscHandler {
   public:
