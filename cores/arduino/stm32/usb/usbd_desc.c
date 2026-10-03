@@ -70,6 +70,9 @@
 #elif defined(USBD_USE_HID_COMPOSITE)
   #define USBD_CLASS_PRODUCT_HS_STRING        CONCATS(BOARD_NAME, "HID in HS Mode")
   #define USBD_CLASS_PRODUCT_FS_STRING        CONCATS(BOARD_NAME, "HID in FS Mode")
+#elif defined(USBD_USE_CDC_MSC)
+  #define USBD_CLASS_PRODUCT_HS_STRING        CONCATS(BOARD_NAME, "CDC+MSC in HS Mode")
+  #define USBD_CLASS_PRODUCT_FS_STRING        CONCATS(BOARD_NAME, "CDC+MSC in FS Mode")
 #elif defined(USBD_USE_CDC)
   #define USBD_CLASS_PRODUCT_HS_STRING        CONCATS(BOARD_NAME, "CDC in HS Mode")
   #define USBD_CLASS_PRODUCT_FS_STRING        CONCATS(BOARD_NAME, "CDC in FS Mode")
@@ -170,9 +173,15 @@ __ALIGN_BEGIN uint8_t USBD_Class_DeviceDesc[USB_LEN_DEV_DESC] __ALIGN_END = {
   0x00,                       /* bcdUSB */
 #endif
   0x02,
+#ifdef USBD_USE_CDC_MSC
+  0xEF,                       /* bDeviceClass: Miscellaneous, functions use IAD */
+  0x02,                       /* bDeviceSubClass: Common Class */
+  0x01,                       /* bDeviceProtocol: Interface Association Descriptor */
+#else
   0x02,                       /* bDeviceClass */
   0x02,                       /* bDeviceSubClass */
   0x00,                       /* bDeviceProtocol */
+#endif
   USB_MAX_EP0_SIZE,           /* bMaxPacketSize */
   LOBYTE(USBD_VID),           /* idVendor */
   HIBYTE(USBD_VID),           /* idVendor */

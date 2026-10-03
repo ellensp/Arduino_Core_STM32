@@ -24,6 +24,9 @@
 #include "usbd_desc.h"
 #include "usbd_cdc_if.h"
 #include "bootloader.h"
+#ifdef USBD_USE_CDC_MSC
+  #include "usbd_cdc_msc.h"
+#endif
 
 #ifdef USE_USB_HS
   #define CDC_MAX_PACKET_SIZE USB_OTG_HS_MAX_PACKET_SIZE
@@ -59,6 +62,15 @@ __IO bool dtrState = false; /* lineState */
 __IO bool rtsState = false;
 __IO bool receivePended = true;
 static uint32_t transmitStart = 0;
+
+#ifdef USE_USBD_COMPOSITE
+  /* CDC is one class of a composite device: address it by its class ID */
+  #define CDC_CLASSID_ARG             , USBD_CDC_GetClassId()
+  #define CDC_CLASS_DATA(PDEV)        ((PDEV)->pClassDataCmsit[USBD_CDC_GetClassId()])
+#else
+  #define CDC_CLASSID_ARG
+  #define CDC_CLASS_DATA(PDEV)        ((PDEV)->pClassData)
+#endif
 
 #ifdef DTR_TOGGLING_SEQ
   /* DTR toggling sequence management */
@@ -242,7 +254,7 @@ static int8_t USBD_CDC_Receive(uint8_t *Buf, uint32_t *Len)
   receivePended = false;
   /* If enough space in the queue for a full buffer then continue receive */
   if (!CDC_resume_receive()) {
-    USBD_CDC_ClearBuffer(&hUSBD_Device_CDC);
+    USBD_CDC_ClearBuffer(&hUSBD_Device_CDC CDC_CLASSID_ARG);
   }
   return ((int8_t)USBD_OK);
 }
@@ -283,6 +295,12 @@ void CDC_init(void)
   }
 #endif /* ICACHE && HAL_ICACHE_MODULE_ENABLED && !HAL_ICACHE_MODULE_DISABLED */
   if (!CDC_initialized) {
+#ifdef USBD_USE_CDC_MSC
+    /* CDC + MSC composite device */
+    if (USBD_CDC_MSC_Init(&hUSBD_Device_CDC, &USBD_CDC_fops) == USBD_OK) {
+      CDC_initialized = true;
+    }
+#else
     /* Init Device Library */
     if (USBD_Init(&hUSBD_Device_CDC, &USBD_Desc, 0) == USBD_OK) {
       /* Add Supported Class */
@@ -295,6 +313,7 @@ void CDC_init(void)
         }
       }
     }
+#endif /* USBD_USE_CDC_MSC */
   }
 }
 
@@ -303,6 +322,10 @@ void CDC_deInit(void)
   if (CDC_initialized) {
     USBD_Stop(&hUSBD_Device_CDC);
     USBD_CDC_DeInit();
+#ifdef USE_USBD_COMPOSITE
+    /* Clear the composite configuration so the next init builds it afresh */
+    USBD_UnRegisterClassComposite(&hUSBD_Device_CDC);
+#endif
     USBD_DeInit(&hUSBD_Device_CDC);
     CDC_initialized = false;
   }
@@ -332,7 +355,7 @@ void CDC_continue_transmit(void)
 {
   uint16_t size;
   uint8_t *buffer;
-  USBD_CDC_HandleTypeDef *hcdc = (USBD_CDC_HandleTypeDef *) hUSBD_Device_CDC.pClassData;
+  USBD_CDC_HandleTypeDef *hcdc = (USBD_CDC_HandleTypeDef *) CDC_CLASS_DATA(&hUSBD_Device_CDC);
   /*
    * TS: This method can be called both in the main thread
    * (via USBSerial::write) and in the IRQ stream (via USBD_CDC_TransmistCplt),
@@ -341,16 +364,16 @@ void CDC_continue_transmit(void)
    * transfer ending! The IRQ thread is uninterrupted, since its priority
    * is higher than that of the main thread. So this method is thread safe.
    */
-  if (hcdc->TxState == 0U) {
+  if (hcdc != NULL && hcdc->TxState == 0U) {
     buffer = CDC_TransmitQueue_ReadBlock(&TransmitQueue, &size);
     if (size > 0) {
       transmitStart = HAL_GetTick();
-      USBD_CDC_SetTxBuffer(&hUSBD_Device_CDC, buffer, size);
+      USBD_CDC_SetTxBuffer(&hUSBD_Device_CDC, buffer, size CDC_CLASSID_ARG);
       /*
        * size never exceed PMA buffer and USBD_CDC_TransmitPacket make full
        * copy of block in PMA, so no need to worry about buffer damage
        */
-      USBD_CDC_TransmitPacket(&hUSBD_Device_CDC);
+      USBD_CDC_TransmitPacket(&hUSBD_Device_CDC CDC_CLASSID_ARG);
     }
   }
 }

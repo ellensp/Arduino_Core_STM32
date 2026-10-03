@@ -514,8 +514,18 @@ USBD_StatusTypeDef USBD_LL_Init(USBD_HandleTypeDef *pdev)
 #if !defined (USB)
   /* configure EPs FIFOs */
   HAL_PCDEx_SetRxFiFo(&g_hpcd, ep_def[0].ep_size);
-  for (uint32_t i = 1; i < (DEV_NUM_EP + 1); i++) {
-    HAL_PCDEx_SetTxFiFo(&g_hpcd, ep_def[i].ep_adress & 0xF, ep_def[i].ep_size);
+  /* Each TX FIFO is placed after the lower-numbered ones, so set them in order.
+   * Size each from the largest endpoint using that number. */
+  for (uint32_t fifo = 0; fifo < 16U; fifo++) {
+    uint32_t size = 0;
+    for (uint32_t i = 1; i < (DEV_NUM_EP + 1); i++) {
+      if (((ep_def[i].ep_adress & 0xFU) == fifo) && (ep_def[i].ep_size > size)) {
+        size = ep_def[i].ep_size;
+      }
+    }
+    if (size) {
+      HAL_PCDEx_SetTxFiFo(&g_hpcd, fifo, size);
+    }
   }
 #else
   for (uint32_t i = 0; i < (DEV_NUM_EP + 1); i++) {

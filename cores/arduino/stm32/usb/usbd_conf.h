@@ -95,6 +95,30 @@ extern "C" {
 #define __HAL_PCD_UNGATE_PHYCLOCK(_DUMMY_)
 #endif
 
+/* CDC + MSC composite device, built with the ST composite builder.
+ * Enabled with both USBD_USE_CDC and USBD_USE_CDC_MSC. */
+#ifdef USBD_USE_CDC_MSC
+#ifndef USBD_USE_CDC
+#error "USBD_USE_CDC_MSC also requires USBD_USE_CDC"
+#endif
+#define USBD_USE_MSC_CLASS
+#define USE_USBD_COMPOSITE
+#define USBD_CMPSIT_ACTIVATE_CDC                    1U
+#define USBD_CMPSIT_ACTIVATE_MSC                    1U
+#define USBD_COMPOSITE_USE_IAD                      1U
+#define USBD_MAX_SUPPORTED_CLASS                    2U
+#define USBD_MAX_NUM_INTERFACES                     3U
+#if defined(USB)
+/* USB FS device: CDC OUT is double buffered and takes all of EP1, so MSC uses EP4 */
+#define MSC_EPIN_ADDR                               0x84U
+#define MSC_EPOUT_ADDR                              0x04U
+#else
+/* OTG: MSC shares EP1/EP2 with the opposite CDC directions, to fit OTG_FS (EP0-EP3) */
+#define MSC_EPIN_ADDR                               0x81U
+#define MSC_EPOUT_ADDR                              0x02U
+#endif
+#endif /* USBD_USE_CDC_MSC */
+
 #ifndef USBD_MAX_NUM_INTERFACES
 #define USBD_MAX_NUM_INTERFACES                     2U
 #endif /* USBD_MAX_NUM_INTERFACES */

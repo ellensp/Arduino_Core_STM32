@@ -149,6 +149,7 @@ uint8_t USBD_CDC_SetTxBuffer(USBD_HandleTypeDef *pdev, uint8_t *pbuff,
                              uint32_t length, uint8_t ClassId);
 uint8_t USBD_CDC_TransmitPacket(USBD_HandleTypeDef *pdev, uint8_t ClassId);
 uint8_t USBD_CDC_ClearBuffer(USBD_HandleTypeDef *pdev, uint8_t ClassId);
+uint8_t USBD_CDC_GetClassId(void);
 #else
 uint8_t USBD_CDC_SetTxBuffer(USBD_HandleTypeDef *pdev, uint8_t *pbuff,
                              uint32_t length);
